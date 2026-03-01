@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1772378137813",
+    "title": "wifi not working in block B",
+    "description": "wifi is completely blocked in block B hostel since last 2 days",
+    "category": "WiFi",
+    "studentName": "Rekha",
+    "status": "Resolved",
+    "createdAt": "2026-03-01T15:15:37.814Z"
+  },
+  {
+    "id": "1772380735803",
+    "title": "wifi not working in block A",
+    "description": "hgfyguhjkkkkkkkkkkkkkkghjbhb",
+    "category": "WiFi",
+    "studentName": "Rekha",
+    "status": "Resolved",
+    "createdAt": "2026-03-01T15:58:55.803Z"
+  }
+]

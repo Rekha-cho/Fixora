@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixora - Student Complaint Portal</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1e293b; }
+
+        nav {
+            background: #1a569b;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        nav h1 { font-size: 22px; }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            background: #00b4d8;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d1b2a, #1a569b);
+            color: white;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .hero h2 { font-size: 36px; margin-bottom: 10px; }
+        .hero p { font-size: 16px; color: #90caf9; margin-bottom: 30px; }
+        .hero button {
+            background: #00b4d8;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        .card h3 { font-size: 20px; color: #1a569b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        textarea { height: 100px; resize: vertical; }
+
+        .btn {
+            background: #1a569b;
+            color: white;
+            border: none;
+            padding: 11px 28px;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn:hover { background: #00b4d8; }
+
+        .complaint-card {
+            background: #f8fafc;
+            border-left: 4px solid #1a569b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+        .complaint-card h4 { font-size: 16px; margin-bottom: 6px; }
+        .complaint-card p { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-pending { background: #fef3c7; color: #b45309; }
+        .badge-progress { background: #dbeafe; color: #1d4ed8; }
+        .badge-resolved { background: #d1fae5; color: #065f46; }
+
+        .msg { padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; font-weight: bold; display: none; }
+        .msg.success { background: #d1fae5; color: #065f46; }
+        .msg.error { background: #fee2e2; color: #991b1b; }
+
+        .empty { text-align: center; color: #94a3b8; padding: 40px; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <h1>🎓 Fixora</h1>
+    <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:white;font-size:14px">👤 <span id="userName"></span></span>
+        <a href="#" onclick="logout()" style="background:#e53e3e">Logout</a>
+    </div>
+</nav>
+
+<div class="hero">
+    <h2>Student Complaint Portal</h2>
+    <p>Submit your complaints and track their resolution status</p>
+    <button onclick="document.getElementById('formSection').scrollIntoView({behavior:'smooth'})">
+        Submit a Complaint ↓
+    </button>
+</div>
+
+<div class="container">
+
+    <!-- Submit Form -->
+    <div class="card" id="formSection">
+        <h3>📝 Submit New Complaint</h3>
+        <div class="msg" id="msg"></div>
+        <input type="text" id="studentName" placeholder="Your Name" />
+        <input type="text" id="title" placeholder="Complaint Title (e.g. WiFi not working in Block B)" />
+        <select id="category">
+            <option value="">-- Select Category --</option>
+            <option value="WiFi">📶 WiFi</option>
+            <option value="Hostel">🏠 Hostel</option>
+            <option value="Mess Food">🍽️ Mess Food</option>
+            <option value="Faculty">👨‍🏫 Faculty</option>
+            <option value="Other">📌 Other</option>
+        </select>
+        <textarea id="description" placeholder="Describe your issue in detail..."></textarea>
+        <button class="btn" onclick="submitComplaint()">Submit Complaint</button>
+    </div>
+
+    <!-- Complaints List -->
+    <div class="card">
+        <h3>📋 All Complaints</h3>
+        <div id="complaintsList"></div>
+    </div>
+
+</div>
+
+<script>
+    // Role check - sirf student access kar sake
+const user = JSON.parse(localStorage.getItem('user'));
+if (!user) {
+    window.location.href = 'login.html';
+} else if (user.role === 'admin') {
+    window.location.href = 'admin.html';
+}
+
+    // Page load hote hi complaints fetch karo
+    loadComplaints();
+
+    async function submitComplaint() {
+        const studentName = document.getElementById('studentName').value.trim();
+        const title = document.getElementById('title').value.trim();
+        const category = document.getElementById('category').value;
+        const description = document.getElementById('description').value.trim();
+
+        if (!studentName || !title || !category || !description) {
+            showMsg('⚠️ Please fill all fields!', 'error');
+            return;
+        }
+
+        const res = await fetch('/api/complaints', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentName, title, category, description })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            showMsg('✅ Complaint submitted successfully!', 'success');
+            document.getElementById('studentName').value = '';
+            document.getElementById('title').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('description').value = '';
+            loadComplaints();
+        } else {
+            showMsg('❌ ' + data.message, 'error');
+        }
+    }
+
+    async function loadComplaints() {
+        const res = await fetch('/api/complaints');
+        const complaints = await res.json();
+        const div = document.getElementById('complaintsList');
+
+        if (complaints.length === 0) {
+            div.innerHTML = '<div class="empty">No complaints yet. Be the first to submit one!</div>';
+            return;
+        }
+
+        div.innerHTML = complaints.reverse().map(c => `
+            <div class="complaint-card">
+                <h4>${c.title} <span style="color:#64748b;font-weight:normal;font-size:13px">[${c.category}]</span></h4>
+                <p>${c.description}</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <small style="color:#94a3b8">👤 ${c.studentName} &nbsp;|&nbsp; 📅 ${new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+                    <span class="badge ${getBadgeClass(c.status)}">${c.status}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function getBadgeClass(status) {
+        if (status === 'Pending') return 'badge-pending';
+        if (status === 'In Progress') return 'badge-progress';
+        if (status === 'Resolved') return 'badge-resolved';
+        return '';
+    }
+
+    function showMsg(text, type) {
+        const msg = document.getElementById('msg');
+        msg.textContent = text;
+        msg.className = 'msg ' + type;
+        msg.style.display = 'block';
+        setTimeout(() => msg.style.display = 'none', 3000);
+    }
+
+    // Naam dikhao
+document.getElementById('userName').textContent = user.name;
+
+function logout() {
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+}
+</script>
+
+</body>
+</html>

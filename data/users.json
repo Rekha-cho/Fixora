@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1772379990098",
+    "name": "Rekha",
+    "email": "rekha0684.becse24@chitkara.edu.in",
+    "password": "myvoice04",
+    "role": "student"
+  },
+  {
+    "id": "admin001",
+    "name": "Admin",
+    "email": "admin@fixora.com",
+    "password": "admin123",
+    "role": "admin"
+  }
+]
