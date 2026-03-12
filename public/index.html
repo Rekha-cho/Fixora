@@ -162,83 +162,96 @@ if (!user) {
     window.location.href = 'admin.html';
 }
 
-    // Page load hote hi complaints fetch karo
-    loadComplaints();
-
-    async function submitComplaint() {
-        const studentName = document.getElementById('studentName').value.trim();
-        const title = document.getElementById('title').value.trim();
-        const category = document.getElementById('category').value;
-        const description = document.getElementById('description').value.trim();
-
-        if (!studentName || !title || !category || !description) {
-            showMsg('⚠️ Please fill all fields!', 'error');
-            return;
-        }
-
-        const res = await fetch('/api/complaints', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentName, title, category, description })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            showMsg('✅ Complaint submitted successfully!', 'success');
-            document.getElementById('studentName').value = '';
-            document.getElementById('title').value = '';
-            document.getElementById('category').value = '';
-            document.getElementById('description').value = '';
-            loadComplaints();
-        } else {
-            showMsg('❌ ' + data.message, 'error');
-        }
-    }
-
-    async function loadComplaints() {
-        const res = await fetch('/api/complaints');
-        const complaints = await res.json();
-        const div = document.getElementById('complaintsList');
-
-        if (complaints.length === 0) {
-            div.innerHTML = '<div class="empty">No complaints yet. Be the first to submit one!</div>';
-            return;
-        }
-
-        div.innerHTML = complaints.reverse().map(c => `
-            <div class="complaint-card">
-                <h4>${c.title} <span style="color:#64748b;font-weight:normal;font-size:13px">[${c.category}]</span></h4>
-                <p>${c.description}</p>
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                    <small style="color:#94a3b8">👤 ${c.studentName} &nbsp;|&nbsp; 📅 ${new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
-                    <span class="badge ${getBadgeClass(c.status)}">${c.status}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function getBadgeClass(status) {
-        if (status === 'Pending') return 'badge-pending';
-        if (status === 'In Progress') return 'badge-progress';
-        if (status === 'Resolved') return 'badge-resolved';
-        return '';
-    }
-
-    function showMsg(text, type) {
-        const msg = document.getElementById('msg');
-        msg.textContent = text;
-        msg.className = 'msg ' + type;
-        msg.style.display = 'block';
-        setTimeout(() => msg.style.display = 'none', 3000);
-    }
-
-    // Naam dikhao
+// Naam dikhao
 document.getElementById('userName').textContent = user.name;
+
+// Token lo localStorage se
+function getToken() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user ? user.token : null;
+}
 
 function logout() {
     localStorage.removeItem('user');
     window.location.href = 'login.html';
+}
+
+// Page load hote hi complaints fetch karo
+loadComplaints();
+
+async function submitComplaint() {
+    const studentName = document.getElementById('studentName').value.trim();
+    const title = document.getElementById('title').value.trim();
+    const category = document.getElementById('category').value;
+    const description = document.getElementById('description').value.trim();
+
+    if (!studentName || !title || !category || !description) {
+        showMsg('⚠️ Please fill all fields!', 'error');
+        return;
+    }
+
+    const res = await fetch('/api/complaints', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()  // ← Token bheja
+        },
+        body: JSON.stringify({ studentName, title, category, description })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        showMsg('✅ Complaint submitted successfully!', 'success');
+        document.getElementById('studentName').value = '';
+        document.getElementById('title').value = '';
+        document.getElementById('category').value = '';
+        document.getElementById('description').value = '';
+        loadComplaints();
+    } else {
+        showMsg('❌ ' + data.message, 'error');
+    }
+}
+
+async function loadComplaints() {
+    const res = await fetch('/api/complaints', {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()  // ← Token bheja
+        }
+    });
+    const complaints = await res.json();
+    const div = document.getElementById('complaintsList');
+
+    if (!Array.isArray(complaints) || complaints.length === 0) {
+        div.innerHTML = '<div class="empty">No complaints yet. Be the first to submit one!</div>';
+        return;
+    }
+
+    div.innerHTML = complaints.reverse().map(c => `
+        <div class="complaint-card">
+            <h4>${c.title} <span style="color:#64748b;font-weight:normal;font-size:13px">[${c.category}]</span></h4>
+            <p>${c.description}</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <small style="color:#94a3b8">👤 ${c.studentName} &nbsp;|&nbsp; 📅 ${new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+                <span class="badge ${getBadgeClass(c.status)}">${c.status}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getBadgeClass(status) {
+    if (status === 'Pending') return 'badge-pending';
+    if (status === 'In Progress') return 'badge-progress';
+    if (status === 'Resolved') return 'badge-resolved';
+    return '';
+}
+
+function showMsg(text, type) {
+    const msg = document.getElementById('msg');
+    msg.textContent = text;
+    msg.className = 'msg ' + type;
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 3000);
 }
 </script>
 

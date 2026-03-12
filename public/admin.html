@@ -213,80 +213,100 @@ if (!user) {
     window.location.href = 'index.html';
 }
 
-    let allComplaints = [];
+// Admin ka naam dikhao
+document.getElementById('adminName').textContent = user.name;
 
-    loadComplaints();
-
-    async function loadComplaints() {
-        const res = await fetch('/api/complaints');
-        allComplaints = await res.json();
-        updateStats(allComplaints);
-        renderComplaints(allComplaints);
-    }
-
-    function updateStats(complaints) {
-        document.getElementById('countTotal').textContent = complaints.length;
-        document.getElementById('countPending').textContent = complaints.filter(c => c.status === 'Pending').length;
-        document.getElementById('countProgress').textContent = complaints.filter(c => c.status === 'In Progress').length;
-        document.getElementById('countResolved').textContent = complaints.filter(c => c.status === 'Resolved').length;
-    }
-
-    function applyFilter() {
-        const status = document.getElementById('filterStatus').value;
-        const category = document.getElementById('filterCategory').value;
-        let filtered = allComplaints;
-        if (status !== 'all') filtered = filtered.filter(c => c.status === status);
-        if (category !== 'all') filtered = filtered.filter(c => c.category === category);
-        renderComplaints(filtered);
-    }
-
-    function renderComplaints(complaints) {
-        const div = document.getElementById('complaintsList');
-        if (complaints.length === 0) {
-            div.innerHTML = '<div class="empty">No complaints found.</div>';
-            return;
-        }
-        div.innerHTML = complaints.slice().reverse().map(c => `
-            <div class="complaint-card status-${c.status.replace(' ', '-')}" id="card-${c.id}">
-                <div class="card-top">
-                    <h4>${c.title} <span style="color:#64748b;font-weight:normal;font-size:13px">[${c.category}]</span></h4>
-                    <span class="badge badge-${c.status.replace(' ', '-')}">${c.status}</span>
-                </div>
-                <p class="card-desc">${c.description}</p>
-                <p class="card-meta">👤 ${c.studentName} &nbsp;|&nbsp; 📅 ${new Date(c.createdAt).toLocaleDateString('en-IN')}</p>
-                <div class="status-updater">
-                    <select id="sel-${c.id}">
-                        <option ${c.status==='Pending'?'selected':''}>Pending</option>
-                        <option ${c.status==='In Progress'?'selected':''}>In Progress</option>
-                        <option ${c.status==='Resolved'?'selected':''}>Resolved</option>
-                    </select>
-                    <button class="btn-update" onclick="updateStatus('${c.id}')">Update Status</button>
-                    <span class="success-msg" id="msg-${c.id}">✅ Updated!</span>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    async function updateStatus(id) {
-        const status = document.getElementById('sel-' + id).value;
-        const res = await fetch('/api/complaints/' + id + '/status', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        if (res.ok) {
-            const msg = document.getElementById('msg-' + id);
-            msg.style.display = 'inline-block';
-            setTimeout(() => msg.style.display = 'none', 2000);
-            loadComplaints();
-        }
-    }
-
-    document.getElementById('adminName').textContent = user.name;
+// Token lo
+function getToken() {
+    const u = JSON.parse(localStorage.getItem('user'));
+    return u ? u.token : null;
+}
 
 function logout() {
     localStorage.removeItem('user');
     window.location.href = 'login.html';
+}
+
+let allComplaints = [];
+
+loadComplaints();
+
+async function loadComplaints() {
+    const res = await fetch('/api/complaints', {
+        headers: {
+            'Authorization': 'Bearer ' + getToken()  // ← Token bheja
+        }
+    });
+
+    if (!res.ok) {
+        console.error('Failed to fetch complaints');
+        return;
+    }
+
+    allComplaints = await res.json();
+    updateStats(allComplaints);
+    renderComplaints(allComplaints);
+}
+
+function updateStats(complaints) {
+    document.getElementById('countTotal').textContent = complaints.length;
+    document.getElementById('countPending').textContent = complaints.filter(c => c.status === 'Pending').length;
+    document.getElementById('countProgress').textContent = complaints.filter(c => c.status === 'In Progress').length;
+    document.getElementById('countResolved').textContent = complaints.filter(c => c.status === 'Resolved').length;
+}
+
+function applyFilter() {
+    const status = document.getElementById('filterStatus').value;
+    const category = document.getElementById('filterCategory').value;
+    let filtered = allComplaints;
+    if (status !== 'all') filtered = filtered.filter(c => c.status === status);
+    if (category !== 'all') filtered = filtered.filter(c => c.category === category);
+    renderComplaints(filtered);
+}
+
+function renderComplaints(complaints) {
+    const div = document.getElementById('complaintsList');
+    if (complaints.length === 0) {
+        div.innerHTML = '<div class="empty">No complaints found.</div>';
+        return;
+    }
+    div.innerHTML = complaints.slice().reverse().map(c => `
+        <div class="complaint-card status-${c.status.replace(' ', '-')}" id="card-${c.id}">
+            <div class="card-top">
+                <h4>${c.title} <span style="color:#64748b;font-weight:normal;font-size:13px">[${c.category}]</span></h4>
+                <span class="badge badge-${c.status.replace(' ', '-')}">${c.status}</span>
+            </div>
+            <p class="card-desc">${c.description}</p>
+            <p class="card-meta">👤 ${c.studentName} &nbsp;|&nbsp; 📅 ${new Date(c.createdAt).toLocaleDateString('en-IN')}</p>
+            <div class="status-updater">
+                <select id="sel-${c.id}">
+                    <option ${c.status==='Pending'?'selected':''}>Pending</option>
+                    <option ${c.status==='In Progress'?'selected':''}>In Progress</option>
+                    <option ${c.status==='Resolved'?'selected':''}>Resolved</option>
+                </select>
+                <button class="btn-update" onclick="updateStatus('${c.id}')">Update Status</button>
+                <span class="success-msg" id="msg-${c.id}">✅ Updated!</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function updateStatus(id) {
+    const status = document.getElementById('sel-' + id).value;
+    const res = await fetch('/api/complaints/' + id + '/status', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()  // ← Token bheja
+        },
+        body: JSON.stringify({ status })
+    });
+    if (res.ok) {
+        const msg = document.getElementById('msg-' + id);
+        msg.style.display = 'inline-block';
+        setTimeout(() => msg.style.display = 'none', 2000);
+        loadComplaints();
+    }
 }
 </script>
 

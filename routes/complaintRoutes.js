@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const { authMiddleware } = require('../middleware/auth'); // ← Yeh add kiya
 
 const complaintsFile = path.join(__dirname, '../data/complaints.json');
 
@@ -10,7 +11,7 @@ function getComplaints() {
         fs.writeFileSync(complaintsFile, '[]', 'utf8');
         return [];
     }
-    const data = fs.readFileSync(complaintsFile, 'utf8').replace(/^\uFEFF/, ''); // BOM remove
+    const data = fs.readFileSync(complaintsFile, 'utf8').replace(/^\uFEFF/, '');
     if (!data.trim()) return [];
     return JSON.parse(data);
 }
@@ -19,7 +20,8 @@ function saveComplaints(complaints) {
     fs.writeFileSync(complaintsFile, JSON.stringify(complaints, null, 2), 'utf8');
 }
 
-router.post('/', (req, res) => {
+// POST - authMiddleware protect kar raha hai ✅
+router.post('/', authMiddleware, (req, res) => {
     const { title, description, category, studentName } = req.body;
     if (!title || !description || !category) {
         return res.status(400).json({ message: 'All fields required' });
@@ -37,19 +39,22 @@ router.post('/', (req, res) => {
     res.status(201).json({ message: 'Complaint submitted!', complaint: newComplaint });
 });
 
-router.get('/', (req, res) => {
+// GET all - authMiddleware protect kar raha hai ✅
+router.get('/', authMiddleware, (req, res) => {
     const complaints = getComplaints();
     res.json(complaints);
 });
 
-router.get('/:id', (req, res) => {
+// GET by ID - authMiddleware protect kar raha hai ✅
+router.get('/:id', authMiddleware, (req, res) => {
     const complaints = getComplaints();
     const complaint = complaints.find(c => c.id === req.params.id);
     if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
     res.json(complaint);
 });
 
-router.patch('/:id/status', (req, res) => {
+// PATCH status - authMiddleware protect kar raha hai ✅
+router.patch('/:id/status', authMiddleware, (req, res) => {
     const { status } = req.body;
     const validStatuses = ['Pending', 'In Progress', 'Resolved'];
     if (!validStatuses.includes(status)) {

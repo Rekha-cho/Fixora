@@ -270,7 +270,11 @@
 
         if (res.ok) {
             // User info save karo
-            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            localStorage.setItem('user', JSON.stringify({
+                ...data.user,
+                token: data.token
+            }));
             showMsg('✅ Login successful! Redirecting...', 'success');
 
             setTimeout(() => {
