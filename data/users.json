@@ -12,5 +12,19 @@
     "email": "admin@fixora.com",
     "password": "admin123",
     "role": "admin"
+  },
+  {
+    "id": "1773029969889",
+    "name": "ritika",
+    "email": "ritika@gmail.com",
+    "password": "hellofixora",
+    "role": "student"
+  },
+  {
+    "id": "1773242253923",
+    "name": "Rekha",
+    "email": "rekha@gmail.com",
+    "password": "rekha04",
+    "role": "student"
   }
 ]
