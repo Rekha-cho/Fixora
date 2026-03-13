@@ -26,5 +26,12 @@
     "email": "rekha@gmail.com",
     "password": "rekha04",
     "role": "student"
+  },
+  {
+    "id": "1773358743354",
+    "name": "Simran",
+    "email": "simran0684.becse24@chitkara.edu.in",
+    "password": "fixora@1",
+    "role": "student"
   }
 ]

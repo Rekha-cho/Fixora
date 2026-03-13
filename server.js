@@ -19,7 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 
 // File streaming se index.html serve karo
-app.get('/', (req, res) => {
+app.get('/', (req,res) => {
     const filePath = path.join(__dirname, 'public', 'index.html');
     const fileStream = fs.createReadStream(filePath);
     res.setHeader('Content-Type', 'text/html');
