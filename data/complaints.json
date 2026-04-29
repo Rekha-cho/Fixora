@@ -25,5 +25,14 @@
     "studentName": "Simran",
     "status": "In Progress",
     "createdAt": "2026-03-12T23:40:03.078Z"
+  },
+  {
+    "id": "1773383603294",
+    "title": "simran buri hai",
+    "description": "woh mujhse baat nhi karti. ignore karti hai",
+    "category": "Other",
+    "studentName": "moti simran",
+    "status": "Resolved",
+    "createdAt": "2026-03-13T06:33:23.294Z"
   }
 ]
