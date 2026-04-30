@@ -1,62 +1,140 @@
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
-const usersFile = path.join(__dirname, '../data/users.json');
+const User = require('../models/User');
+
 const JWT_SECRET = process.env.JWT_SECRET || 'fixora_secret_key';
 
-function getUsers() {
-    if (!fs.existsSync(usersFile)) return [];
-    const data = fs.readFileSync(usersFile, 'utf8').replace(/^\uFEFF/, '');
-    if (!data.trim()) return [];
-    return JSON.parse(data);
-}
+// Signup with bcrypt + MongoDB
+router.post('/signup', async (req, res, next) => {
+    try {
+        const { name, email, password } = req.body;
 
-function saveUsers(users) {
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), 'utf8');
-}
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'All fields required' });
+        }
 
-// Signup
-router.post('/signup', (req, res) => {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: 'All fields required' });
+        const existingUser = await User.findOne({ email });
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already registered' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await User.create({
+            name,
+            email,
+            password: hashedPassword,
+            role: 'student'
+        });
+
+        res.status(201).json({
+            message: 'Signup successful!',
+            user: {
+                id: newUser._id,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role
+            }
+        });
+
+    } catch (error) {
+        next(error);
     }
-    const users = getUsers();
-    const exists = users.find(u => u.email === email);
-    if (exists) return res.status(400).json({ message: 'Email already registered' });
-
-    const newUser = {
-        id: Date.now().toString(),
-        name, email, password,
-        role: 'student'
-    };
-    users.push(newUser);
-    saveUsers(users);
-    res.status(201).json({ message: 'Signup successful!', user: { name, email } });
 });
 
-// Login — JWT token generate hoga
-router.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    const users = getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+// Login with bcrypt + JWT + session
+router.post('/login', async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
 
-    // JWT Token banao
-    const token = jwt.sign(
-        { id: user.id, name: user.name, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-    );
+        const user = await User.findOne({ email });
 
-    res.json({
-        message: 'Login successful!',
-        token: token,
-        user: { id: user.id, name: user.name, role: user.role }
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign(
+            {
+                id: user._id,
+                name: user.name,
+                role: user.role
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        req.session.user = {
+            id: user._id,
+            name: user.name,
+            role: user.role
+        };
+
+        res.cookie('fixora_token', token, {
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000
+        });
+
+        res.json({
+            message: 'Login successful!',
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                role: user.role
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Logout - session + cookie clear
+router.post('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.clearCookie('fixora_token');
+        res.json({ message: 'Logout successful' });
     });
+});
+
+// Create default admin one time
+router.post('/create-admin', async (req, res, next) => {
+    try {
+        const existingAdmin = await User.findOne({ email: 'admin@fixora.com' });
+
+        if (existingAdmin) {
+            return res.json({ message: 'Admin already exists' });
+        }
+
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+
+        await User.create({
+            name: 'Admin',
+            email: 'admin@fixora.com',
+            password: hashedPassword,
+            role: 'admin'
+        });
+
+        res.status(201).json({
+            message: 'Admin created successfully',
+            email: 'admin@fixora.com',
+            password: 'admin123'
+        });
+
+    } catch (error) {
+        next(error);
+    }
 });
 
 module.exports = router;

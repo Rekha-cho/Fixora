@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Complaint Details</title>
+<style>
+body { font-family:'Segoe UI'; background:#f0f4f8; margin:0; }
+nav { background:#1a569b; color:white; padding:15px 30px; display:flex; justify-content:space-between; }
+nav a { color:white; text-decoration:none; background:#00b4d8; padding:7px 14px; border-radius:6px; }
+.card { max-width:700px; margin:40px auto; background:white; padding:25px; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+h2 { color:#1a569b; }
+textarea, select { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #cbd5e1; }
+button { margin-top:12px; padding:10px 18px; background:#1a569b; color:white; border:none; border-radius:8px; cursor:pointer; }
+.badge { padding:4px 12px; border-radius:20px; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<nav>
+  <h2>🔍 Complaint Details</h2>
+  <a href="index.html">Back</a>
+</nav>
+
+<div class="card" id="details">Loading...</div>
+
+<script>
+const user = JSON.parse(localStorage.getItem('user'));
+if (!user) window.location.href = 'login.html';
+
+const params = new URLSearchParams(window.location.search);
+const id = params.get('id');
+
+async function loadDetails() {
+    const res = await fetch('/api/complaints/' + id, {
+        headers: { Authorization: 'Bearer ' + user.token }
+    });
+
+    const c = await res.json();
+
+    document.getElementById('details').innerHTML = `
+        <h2>${c.title}</h2>
+        <p><b>Description:</b> ${c.description}</p>
+        <p><b>Category:</b> ${c.category}</p>
+        <p><b>Status:</b> ${c.status}</p>
+        <p><b>Priority:</b> ${c.priority || 'Medium'}</p>
+        <p><b>Student:</b> ${c.studentName}</p>
+        <p><b>Admin Remark:</b> ${c.adminRemark || 'No remark yet'}</p>
+        <p><b>Created:</b> ${new Date(c.createdAt).toLocaleString()}</p>
+        <p><b>Updated:</b> ${new Date(c.updatedAt).toLocaleString()}</p>
+
+        ${c.status === 'Resolved' && user.role === 'student' ? `
+            <hr>
+            <h3>⭐ Submit Feedback</h3>
+            <select id="rating">
+                <option value="5">5 - Excellent</option>
+                <option value="4">4 - Good</option>
+                <option value="3">3 - Average</option>
+                <option value="2">2 - Poor</option>
+                <option value="1">1 - Bad</option>
+            </select>
+            <textarea id="comment" placeholder="Write your feedback"></textarea>
+            <button onclick="submitFeedback()">Submit Feedback</button>
+        ` : ''}
+    `;
+}
+
+async function submitFeedback() {
+    const rating = document.getElementById('rating').value;
+    const comment = document.getElementById('comment').value;
+
+    const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + user.token
+        },
+        body: JSON.stringify({ complaintId: id, rating, comment })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+}
+
+loadDetails();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fixora Report</title>
+    <style>
+        body { font-family: Arial; padding: 30px; }
+        h1 { color: #1a569b; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #1a569b; color: white; }
+    </style>
+</head>
+<body>
+
+<h1>📊 Complaints Report</h1>
+
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Student</th>
+    </tr>
+
+    <% complaints.forEach(c => { %>
+        <tr>
+            <td><%= c.title %></td>
+            <td><%= c.category %></td>
+            <td><%= c.status %></td>
+            <td><%= c.studentName %></td>
+        </tr>
+    <% }) %>
+
+</table>
+
+</body>
+</html>
