@@ -1,0 +1,175 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<div class="hero" style="padding: 4rem 1.5rem;">
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <p>Manage and resolve student complaints efficiently.</p>
+    </div>
+</div>
+
+<div class="container" style="margin-top: -3rem;">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-num" id="countTotal">0</div>
+            <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" id="countPending" style="color: var(--warning);">0</div>
+            <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" id="countProgress" style="color: var(--primary);">0</div>
+            <div class="stat-label">In Progress</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" id="countResolved" style="color: var(--success);">0</div>
+            <div class="stat-label">Resolved</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="flex-between mb-4">
+            <h3 class="card-title" style="margin-bottom: 0;">
+                <i data-lucide="filter" style="color: var(--primary);"></i>
+                <span>Filter Complaints</span>
+            </h3>
+            <div style="display: flex; gap: 1rem;">
+                <select id="filterStatus" onchange="applyFilter()" style="padding: 0.5rem 1rem; width: auto;">
+                    <option value="all">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+                <select id="filterCategory" onchange="applyFilter()" style="padding: 0.5rem 1rem; width: auto;">
+                    <option value="all">All Categories</option>
+                    <option value="WiFi">WiFi</option>
+                    <option value="Hostel">Hostel</option>
+                    <option value="Mess Food">Mess Food</option>
+                    <option value="Faculty">Faculty</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="complaintsList"></div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user.role || user.role.toLowerCase() !== 'admin') {
+        window.location.href = '/login';
+    }
+
+    let allComplaints = [];
+
+    loadComplaints();
+
+    async function loadComplaints() {
+        const res = await fetch('/api/complaints', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        if (!res.ok) return;
+
+        allComplaints = await res.json();
+        updateStats(allComplaints);
+        applyFilter(); // Apply current filter state to the new data
+    }
+
+    function updateStats(complaints) {
+        document.getElementById('countTotal').textContent = complaints.length;
+        document.getElementById('countPending').textContent = complaints.filter(c => c.status === 'Pending').length;
+        document.getElementById('countProgress').textContent = complaints.filter(c => c.status === 'In Progress').length;
+        document.getElementById('countResolved').textContent = complaints.filter(c => c.status === 'Resolved').length;
+    }
+
+    function applyFilter() {
+        const status = document.getElementById('filterStatus').value;
+        const category = document.getElementById('filterCategory').value;
+
+        let filtered = allComplaints;
+        if (status !== 'all') filtered = filtered.filter(c => c.status === status);
+        if (category !== 'all') filtered = filtered.filter(c => c.category === category);
+
+        renderComplaints(filtered);
+    }
+
+    function renderComplaints(complaints) {
+        const div = document.getElementById('complaintsList');
+        if (complaints.length === 0) {
+            div.innerHTML = '<div class="text-center" style="padding: 3rem; color: var(--text-muted);">No complaints found.</div>';
+            return;
+        }
+
+        div.innerHTML = complaints.slice().reverse().map(c => `
+            <div class="complaint-item" style="border-left: 4px solid var(--primary); border-left-color: ${getStatusColor(c.status)}">
+                <div class="flex-between mb-4">
+                    <h4 style="font-weight: 600;">${c.title}</h4>
+                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span>
+                </div>
+                <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">${c.description}</p>
+                
+                <div class="flex-between mb-4" style="font-size: 0.85rem; color: var(--text-muted);">
+                    <div style="display: flex; gap: 1rem;">
+                        <span><i data-lucide="user" size="14"></i> ${c.studentName}</span>
+                        <span><i data-lucide="tag" size="14"></i> ${c.category}</span>
+                        <span><i data-lucide="zap" size="14"></i> ${c.priority || 'Medium'}</span>
+                    </div>
+                    <a href="/complaint-details?id=${c._id}" style="color: var(--primary); font-weight: 600; text-decoration: none;">View Full Details →</a>
+                </div>
+
+                <div style="background: white; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; gap: 1rem; align-items: center;">
+                    <select id="sel-${c._id}" style="width: auto; padding: 0.5rem; margin-bottom: 0;">
+                        <option ${c.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                        <option ${c.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                    </select>
+                    <input type="text" id="remark-${c._id}" placeholder="Admin remark" value="${c.adminRemark || ''}" style="margin-bottom: 0; flex: 1;">
+                    <button class="btn btn-primary" onclick="updateStatus('${c._id}')" style="width: auto; padding: 0.5rem 1.5rem;">Update</button>
+                    <span id="msg-${c._id}" style="display: none; color: var(--success); font-weight: 600; font-size: 0.8rem;">✓</span>
+                </div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    function getStatusColor(status) {
+        if (status === 'Pending') return 'var(--warning)';
+        if (status === 'In Progress') return 'var(--primary)';
+        if (status === 'Resolved') return 'var(--success)';
+        return 'var(--border)';
+    }
+
+    async function updateStatus(id) {
+        const status = document.getElementById('sel-' + id).value;
+        const adminRemark = document.getElementById('remark-' + id).value;
+
+        const res = await fetch('/api/complaints/' + id + '/status', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({ status, adminRemark })
+        });
+
+        if (res.ok) {
+            const msg = document.getElementById('msg-' + id);
+            msg.style.display = 'inline-block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+                loadComplaints();
+            }, 1000);
+        }
+    }
+
+    const socket = io();
+    socket.on('complaintCreated', loadComplaints);
+    socket.on('complaintUpdated', loadComplaints);
+    socket.on('complaintDeleted', loadComplaints);
+</script>
+
+<%- include('partials/footer') %>

@@ -11,11 +11,10 @@ const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 // MongoDB connect
 connectDB();
-require('./config/postgres');
 
 // Body parser
 app.use(express.json());
@@ -49,28 +48,21 @@ app.set('views', path.join(__dirname, 'views'));
 // Routes
 const authRoutes = require('./routes/authroutes');
 const complaintRoutes = require('./routes/complaintRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
-
-const Complaint = require('./models/Complaint');
-
-app.get('/report', async (req, res) => {
-    const complaints = await Complaint.find();
-    res.render('report', { complaints });
-});
-
-const feedbackRoutes = require('./routes/feedbackRoutes');
 app.use('/api/feedback', feedbackRoutes);
 
-
-// Home page
-app.get('/', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'index.html');
-    const fileStream = fs.createReadStream(filePath);
-    res.setHeader('Content-Type', 'text/html');
-    fileStream.pipe(res);
-});
+// Simple View Routes
+app.get('/', (req, res) => res.render('index'));
+app.get('/login', (req, res) => res.render('login'));
+app.get('/signup', (req, res) => res.render('signup'));
+app.get('/admin', (req, res) => res.render('admin'));
+app.get('/profile', (req, res) => res.render('profile'));
+app.get('/analytics', (req, res) => res.render('analytics'));
+app.get('/my-complaints', (req, res) => res.render('my-complaints'));
+app.get('/complaint-details', (req, res) => res.render('complaint-details'));
 
 // 404 handler
 app.use((req, res) => {
@@ -93,7 +85,6 @@ const io = new Server(server);
 
 io.on('connection', (socket) => {
     console.log('🟢 User connected:', socket.id);
-
     socket.on('disconnect', () => {
         console.log('🔴 User disconnected:', socket.id);
     });

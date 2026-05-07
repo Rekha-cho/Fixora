@@ -1,0 +1,138 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<div class="container">
+    <div style="margin-top: 2rem; margin-bottom: 2rem;">
+        <a href="javascript:history.back()" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+            <i data-lucide="arrow-left" size="18"></i>
+            <span>Back to List</span>
+        </a>
+    </div>
+
+    <div id="details">
+        <div class="text-center" style="padding: 5rem;">
+            <p>Loading complaint details...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) window.location.href = '/login';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    async function loadDetails() {
+        const res = await fetch('/api/complaints/' + id, {
+            headers: { Authorization: 'Bearer ' + user.token }
+        });
+
+        if (!res.ok) {
+            document.getElementById('details').innerHTML = '<div class="card text-center"><h3>Complaint not found</h3></div>';
+            return;
+        }
+
+        const c = await res.json();
+
+        document.getElementById('details').innerHTML = `
+            <div class="card">
+                <div class="flex-between mb-4">
+                    <h2 style="font-weight: 800; font-size: 2rem;">${c.title}</h2>
+                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-bottom: 2.5rem; background: #f8fafc; padding: 1.5rem; border-radius: var(--radius-md);">
+                    <div>
+                        <label>Category</label>
+                        <p style="font-weight: 600;">${c.category}</p>
+                    </div>
+                    <div>
+                        <label>Priority</label>
+                        <p style="font-weight: 600;">${c.priority || 'Medium'}</p>
+                    </div>
+                    <div>
+                        <label>Submitted By</label>
+                        <p style="font-weight: 600;">${c.studentName}</p>
+                    </div>
+                    <div>
+                        <label>Created On</label>
+                        <p style="font-weight: 600;">${new Date(c.createdAt).toLocaleString()}</p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label>Description</label>
+                    <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: white;">
+                        ${c.description}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label>Admin Remark</label>
+                    <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e;">
+                        ${c.adminRemark || 'No remarks from admin yet.'}
+                    </div>
+                </div>
+
+                ${c.status === 'Resolved' && user.role === 'student' ? `
+                    <div style="margin-top: 3rem; border-top: 2px dashed var(--border); padding-top: 2rem;">
+                        <h3 class="card-title">
+                            <i data-lucide="star" style="color: var(--warning);"></i>
+                            <span>Submit Feedback</span>
+                        </h3>
+                        <div class="form-group">
+                            <label>Rating</label>
+                            <select id="rating">
+                                <option value="5">⭐⭐⭐⭐⭐ - Excellent</option>
+                                <option value="4">⭐⭐⭐⭐ - Good</option>
+                                <option value="3">⭐⭐⭐ - Average</option>
+                                <option value="2">⭐⭐ - Poor</option>
+                                <option value="1">⭐ - Bad</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Comments</label>
+                            <textarea id="comment" placeholder="How was your experience?"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="submitFeedback()" style="width: auto; padding: 0.75rem 2.5rem;">
+                            Submit Feedback
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        lucide.createIcons();
+    }
+
+    async function submitFeedback() {
+        const rating = document.getElementById('rating').value;
+        const comment = document.getElementById('comment').value;
+
+        if(!comment) {
+            showMsg('⚠️ Please provide a comment!', 'error');
+            return;
+        }
+
+        const res = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + user.token
+            },
+            body: JSON.stringify({ complaintId: id, rating, comment })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Thank you for your feedback!');
+            loadDetails();
+        } else {
+            showMsg('❌ ' + data.message, 'error');
+        }
+    }
+
+    loadDetails();
+</script>
+
+<%- include('partials/footer') %>

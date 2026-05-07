@@ -1,0 +1,163 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<div class="hero">
+    <div class="container">
+        <h1>Student Complaint Portal</h1>
+        <p>Your concerns are our priority. Submit and track your complaints with ease.</p>
+        <button class="btn btn-primary" style="width: auto; padding: 0.75rem 2rem; margin: 0 auto;" onclick="document.getElementById('formSection').scrollIntoView({behavior:'smooth'})">
+            <span>Submit a Complaint</span>
+            <i data-lucide="chevron-down"></i>
+        </button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card" id="formSection">
+        <h3 class="card-title">
+            <i data-lucide="pen-tool" style="color: var(--primary);"></i>
+            <span>Submit New Complaint</span>
+        </h3>
+
+        <div class="msg" id="msg"></div>
+
+        <div class="form-group">
+            <label>Student Name</label>
+            <input type="text" id="studentName" placeholder="Enter your full name" />
+        </div>
+
+        <div class="form-group">
+            <label>Complaint Title</label>
+            <input type="text" id="title" placeholder="e.g. WiFi not working in Block A" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category">
+                    <option value="">-- Select Category --</option>
+                    <option value="WiFi">📶 WiFi</option>
+                    <option value="Hostel">🏠 Hostel</option>
+                    <option value="Mess Food">🍽️ Mess Food</option>
+                    <option value="Faculty">👨‍🏫 Faculty</option>
+                    <option value="Other">📌 Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select id="priority">
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium" selected>Medium Priority</option>
+                    <option value="High">High Priority</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="description" placeholder="Describe your issue in detail..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="submitComplaint()">
+            <i data-lucide="send"></i>
+            <span>Submit Complaint</span>
+        </button>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">
+            <i data-lucide="history" style="color: var(--primary);"></i>
+            <span>Recent Complaints</span>
+        </h3>
+        <div id="complaintsList"></div>
+        <div class="text-center mt-4">
+            <a href="/my-complaints" style="color: var(--primary); text-decoration: none; font-weight: 600;">View All My Complaints →</a>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        window.location.href = '/login';
+    } else if (user.role && user.role.toLowerCase() === 'admin') {
+        window.location.href = '/admin';
+    }
+
+    loadComplaints();
+
+    async function submitComplaint() {
+        const studentName = document.getElementById('studentName').value.trim();
+        const title = document.getElementById('title').value.trim();
+        const category = document.getElementById('category').value;
+        const priority = document.getElementById('priority').value;
+        const description = document.getElementById('description').value.trim();
+
+        if (!studentName || !title || !category || !description) {
+            showMsg('⚠️ Please fill all fields!', 'error');
+            return;
+        }
+
+        const res = await fetch('/api/complaints', {
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json',
+                'Authorization':'Bearer ' + getToken()
+            },
+            body:JSON.stringify({ studentName, title, category, priority, description })
+        });
+
+        if (res.ok) {
+            showMsg('✅ Complaint submitted successfully!', 'success');
+            document.getElementById('studentName').value = '';
+            document.getElementById('title').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('priority').value = 'Medium';
+            document.getElementById('description').value = '';
+            loadComplaints();
+        } else {
+            const data = await res.json();
+            showMsg('❌ ' + data.message, 'error');
+        }
+    }
+
+    async function loadComplaints() {
+        const res = await fetch('/api/complaints', {
+            headers:{ 'Authorization':'Bearer ' + getToken() }
+        });
+
+        const complaints = await res.json();
+        const div = document.getElementById('complaintsList');
+
+        if (!Array.isArray(complaints) || complaints.length === 0) {
+            div.innerHTML = '<div class="text-center" style="padding: 2rem; color: var(--text-muted);">No complaints yet. Submit your first complaint!</div>';
+            return;
+        }
+
+        div.innerHTML = complaints.slice(0, 5).map(c => `
+            <div class="complaint-item">
+                <div class="flex-between mb-4">
+                    <h4 style="font-weight: 600;">${c.title}</h4>
+                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span>
+                </div>
+                <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">${c.description}</p>
+                <div class="flex-between" style="font-size: 0.85rem; color: var(--text-muted);">
+                    <div style="display: flex; gap: 1rem;">
+                        <span><i data-lucide="tag" size="14"></i> ${c.category}</span>
+                        <span><i data-lucide="calendar" size="14"></i> ${new Date(c.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <a href="/complaint-details?id=${c._id}" style="color: var(--primary); font-weight: 600; text-decoration: none;">Details →</a>
+                </div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    const socket = io();
+    socket.on('complaintCreated', loadComplaints);
+    socket.on('complaintUpdated', loadComplaints);
+    socket.on('complaintDeleted', loadComplaints);
+</script>
+
+<%- include('partials/footer') %>

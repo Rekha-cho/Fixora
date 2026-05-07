@@ -1,0 +1,50 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<div class="container">
+    <div class="card" style="max-width: 600px; margin: 4rem auto;">
+        <div class="text-center mb-4">
+            <div style="width: 100px; height: 100px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                <i data-lucide="user" size="48"></i>
+            </div>
+            <h2 style="font-weight: 800; font-size: 2rem;">My Profile</h2>
+            <p style="color: var(--text-muted);">Manage your account information</p>
+        </div>
+
+        <div style="background: #f8fafc; padding: 2rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                    <span style="color: var(--text-muted); font-weight: 500;">Full Name</span>
+                    <span id="name" style="font-weight: 700;">Loading...</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                    <span style="color: var(--text-muted); font-weight: 500;">Role</span>
+                    <span id="role" style="font-weight: 700; text-transform: capitalize;">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button onclick="logout()" class="btn btn-primary" style="background: #fee2e2; color: var(--danger); border: 1px solid #fecaca;">
+                <i data-lucide="log-out"></i>
+                <span>Logout from Device</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) window.location.href = '/login';
+
+    document.getElementById('name').textContent = user.name;
+    document.getElementById('role').textContent = user.role;
+    document.getElementById('id').textContent = user.id || user._id;
+
+    function logout() {
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+    }
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,68 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<div class="container">
+    <div class="flex-between mb-4" style="margin-top: 2rem;">
+        <h2 style="font-weight: 800; font-size: 2rem;">My Complaints</h2>
+        <a href="/" class="btn btn-primary" style="width: auto;">
+            <i data-lucide="plus"></i>
+            <span>New Complaint</span>
+        </a>
+    </div>
+
+    <div id="list">
+        <div class="text-center" style="padding: 5rem;">
+            <div class="spinner"></div>
+            <p>Loading your complaints...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) window.location.href = '/login';
+
+    loadComplaints();
+
+    async function loadComplaints() {
+        const res = await fetch('/api/complaints', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await res.json();
+        const div = document.getElementById('list');
+
+        if (!data.length) {
+            div.innerHTML = `
+                <div class="card text-center" style="padding: 4rem;">
+                    <i data-lucide="inbox" size="64" style="color: var(--border); margin-bottom: 1.5rem;"></i>
+                    <h3>No complaints yet</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">You haven't submitted any complaints yet. Click the button above to start.</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        div.innerHTML = data.slice().reverse().map(c => `
+            <div class="card" style="padding: 1.5rem;">
+                <div class="flex-between mb-4">
+                    <h3 style="font-size: 1.25rem; font-weight: 700;">${c.title}</h3>
+                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">${c.description}</p>
+                
+                <div class="flex-between" style="font-size: 0.9rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <div style="display: flex; gap: 1.5rem;">
+                        <span title="Category"><i data-lucide="tag" size="14"></i> ${c.category}</span>
+                        <span title="Date"><i data-lucide="calendar" size="14"></i> ${new Date(c.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <a href="/complaint-details?id=${c._id}" style="color: var(--primary); font-weight: 600; text-decoration: none;">View Details →</a>
+                </div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+</script>
+
+<%- include('partials/footer') %>

@@ -40,7 +40,7 @@ router.get('/', authMiddleware, async (req, res, next) => {
     try {
         let complaints;
 
-        if (req.user.role === 'admin') {
+        if (req.user.role && req.user.role.toLowerCase() === 'admin') {
             complaints = await Complaint.find().sort({ createdAt: -1 });
         } else {
             complaints = await Complaint.find({ studentId: req.user.id }).sort({ createdAt: -1 });
@@ -63,7 +63,7 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
         }
 
         if (
-            req.user.role !== 'admin' &&
+            req.user.role && req.user.role.toLowerCase() !== 'admin' &&
             complaint.studentId.toString() !== req.user.id
         ) {
             return res.status(403).json({ message: 'Access denied' });

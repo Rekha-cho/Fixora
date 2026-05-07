@@ -49,7 +49,7 @@ router.post('/signup', async (req, res, next) => {
 // Login with bcrypt + JWT + session
 router.post('/login', async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
 
         const user = await User.findOne({ email });
 
@@ -61,6 +61,13 @@ router.post('/login', async (req, res, next) => {
 
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // Role verification - ensure selected role matches the user's actual role
+        if (role && user.role !== role) {
+            return res.status(403).json({ 
+                message: `Access denied. You are not registered as ${role}.` 
+            });
         }
 
         const token = jwt.sign(
