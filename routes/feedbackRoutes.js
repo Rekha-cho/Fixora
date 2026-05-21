@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const Feedback = require('../models/Feedback');
+const prisma = require('../config/prismaClient');
 const Complaint = require('../models/Complaint');
+const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
 
 router.post('/', authMiddleware, async (req, res, next) => {
@@ -23,11 +24,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
             return res.status(400).json({ message: 'Feedback can be given only after complaint is resolved' });
         }
 
-        const feedback = await Feedback.create({
-            complaintId,
-            studentId: req.user.id,
-            rating,
-            comment
+        // Save Feedback to Relational SQL DB via Prisma
+        const feedback = await prisma.feedback.create({
+            data: {
+                complaintId,
+                studentId: req.user.id,
+                rating: parseInt(rating, 10),
+                comment: comment || ''
+            }
         });
 
         res.status(201).json({
@@ -42,11 +46,23 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
 router.get('/', authMiddleware, async (req, res, next) => {
     try {
-        const feedbacks = await Feedback.find()
-            .populate('complaintId')
-            .populate('studentId', 'name email');
+        // Fetch from SQL relational DB using Prisma
+        const feedbacks = await prisma.feedback.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
 
-        res.json(feedbacks);
+        // Custom Cross-Database join: Populate complaint and user details from MongoDB
+        const populatedFeedbacks = await Promise.all(feedbacks.map(async (fb) => {
+            const complaint = await Complaint.findById(fb.complaintId).lean();
+            const student = await User.findById(fb.studentId).select('name email').lean();
+            return {
+                ...fb,
+                complaintId: complaint || { title: 'Unknown Complaint' },
+                studentId: student || { name: 'Anonymous Student', email: '' }
+            };
+        }));
+
+        res.json(populatedFeedbacks);
     } catch (error) {
         next(error);
     }

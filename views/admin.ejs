@@ -110,7 +110,10 @@
                     <h4 style="font-weight: 600;">${c.title}</h4>
                     <span class="badge badge-${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span>
                 </div>
-                <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">${c.description}</p>
+                <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    ${c.description}
+                </p>
+                ${c.imageUrl ? `<div class="mt-2" style="margin-bottom: 1rem;"><img src="${c.imageUrl}" alt="Complaint image" style="max-width:100%; max-height:200px; border-radius: var(--radius-md);" /></div>` : ''}
                 
                 <div class="flex-between mb-4" style="font-size: 0.85rem; color: var(--text-muted);">
                     <div style="display: flex; gap: 1rem;">

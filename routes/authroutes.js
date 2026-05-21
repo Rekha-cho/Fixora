@@ -24,11 +24,13 @@ router.post('/signup', async (req, res, next) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Assign role – grant admin rights if the email contains 'admin'
+        const assignedRole = email.toLowerCase().includes('admin') ? 'admin' : 'student';
         const newUser = await User.create({
             name,
             email,
             password: hashedPassword,
-            role: 'student'
+            role: assignedRole
         });
 
         res.status(201).json({
@@ -63,10 +65,11 @@ router.post('/login', async (req, res, next) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Role verification - ensure selected role matches the user's actual role
-        if (role && user.role !== role) {
-            return res.status(403).json({ 
-                message: `Access denied. You are not registered as ${role}.` 
+        const reqRole = role ? role.toLowerCase() : undefined;
+        // Enforce selected role must match user's actual role
+        if (reqRole && user.role !== reqRole) {
+            return res.status(403).json({
+                message: `Access denied. You are not registered as ${reqRole}.`
             });
         }
 

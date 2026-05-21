@@ -58,7 +58,12 @@
             <textarea id="description" placeholder="Describe your issue in detail..."></textarea>
         </div>
 
-        <button class="btn btn-primary" onclick="submitComplaint()">
+        <div class="form-group">
+            <label>Upload Screenshot / Proof (Optional)</label>
+            <input type="file" id="image" accept="image/*" />
+        </div>
+
+        <button id="submitBtn" class="btn btn-primary" onclick="submitComplaint()">
             <i data-lucide="send"></i>
             <span>Submit Complaint</span>
         </button>
@@ -87,39 +92,72 @@
 
     loadComplaints();
 
+    // Helper to toggle loading UI
+    function setLoading(isLoading) {
+        const btn = document.getElementById('submitBtn');
+        if (!btn) return;
+        btn.disabled = isLoading;
+        if (isLoading) {
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Submitting...';
+        } else {
+            btn.innerHTML = '<i data-lucide="send"></i><span>Submit Complaint</span>';
+        }
+        // Re‑create lucide icons (loader may need it)
+        lucide.createIcons();
+    }
+
     async function submitComplaint() {
+        // show loading state
+        setLoading(true);
         const studentName = document.getElementById('studentName').value.trim();
         const title = document.getElementById('title').value.trim();
         const category = document.getElementById('category').value;
         const priority = document.getElementById('priority').value;
         const description = document.getElementById('description').value.trim();
+        const imageFile = document.getElementById('image').files[0];
 
         if (!studentName || !title || !category || !description) {
             showMsg('⚠️ Please fill all fields!', 'error');
+            setLoading(false);
             return;
         }
 
+        const formData = new FormData();
+        formData.append('studentName', studentName);
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('priority', priority);
+        formData.append('description', description);
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
         const res = await fetch('/api/complaints', {
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json',
-                'Authorization':'Bearer ' + getToken()
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + getToken()
             },
-            body:JSON.stringify({ studentName, title, category, priority, description })
+            body: formData
         });
 
         if (res.ok) {
             showMsg('✅ Complaint submitted successfully!', 'success');
+            // reset form fields
             document.getElementById('studentName').value = '';
             document.getElementById('title').value = '';
             document.getElementById('category').value = '';
             document.getElementById('priority').value = 'Medium';
             document.getElementById('description').value = '';
+            document.getElementById('image').value = '';
             loadComplaints();
+            // redirect after a short pause
+            setTimeout(() => { window.location.href = '/my-complaints'; }, 1500);
         } else {
             const data = await res.json();
-            showMsg('❌ ' + data.message, 'error');
+            showMsg('❌ ' + (data.message || 'Submission failed'), 'error');
         }
+        // always clear loading UI
+        setLoading(false);
     }
 
     async function loadComplaints() {

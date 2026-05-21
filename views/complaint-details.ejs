@@ -68,6 +68,17 @@
                     </div>
                 </div>
 
+                ${c.imageUrl ? `
+                <div class="mb-4">
+                    <label>Attachment Proof / Screenshot</label>
+                    <div style="padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: white; text-align: center;">
+                        <a href="${c.imageUrl}" target="_blank">
+                            <img src="${c.imageUrl}" alt="Complaint Proof Screenshot" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-sm); border: 1px solid var(--border);" />
+                        </a>
+                    </div>
+                </div>
+                ` : ''}
+
                 <div class="mb-4">
                     <label>Admin Remark</label>
                     <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e;">

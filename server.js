@@ -46,7 +46,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Routes
-const authRoutes = require('./routes/authroutes');
+const authRoutes = require('./routes/authRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 
@@ -93,6 +93,10 @@ io.on('connection', (socket) => {
 // io ko routes me use karne ke liye
 app.set('io', io);
 
-server.listen(PORT, () => {
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
     console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+  });
+}
+
+module.exports = app;

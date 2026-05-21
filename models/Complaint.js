@@ -33,6 +33,10 @@ const complaintSchema = new mongoose.Schema({
         enum: ['Low', 'Medium', 'High'],
         default: 'Medium'
     },
+    imageUrl: {
+        type: String,
+        default: ''
+    },
     adminRemark: {
         type: String,
         default: ''
